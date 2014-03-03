@@ -34,29 +34,33 @@ public class SendRequestMsgToUser implements Runnable {
 				//System.out.println("The server "+compNameProperty.getUserName()+" could not be connected at port no. "+ port);
 				
 				JOptionPane.showMessageDialog(null,"The user "+ compNameProperty.getUserName()+"is not ready to receive files.","Error sending request",JOptionPane.ERROR_MESSAGE);
-				
+				sendStatus=false;
 			}
+			if(sendStatus==true) {
 			try {
+				
 				oob = new ObjectOutputStream(sock.getOutputStream());
 				
 				in= new ObjectInputStream(sock.getInputStream());
 				
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
+				System.out.println("wuigefiawrhvhvt");
 				e1.printStackTrace();
 			}
-			
+			}
 	}
 	
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
-		System.out.println("Sender Run() methos started.");
+		System.out.println("Sender Run() method started.");
 		int s=FilenameList.size();
-				System.out.println("yyyyyyyyyyyyyyyyyyyyyy");
-				
+		System.out.println("Sender: SendStatus ="+sendStatus);
+		
 				try {
 					
+					if(sendStatus==true) {
 					PushToRecevBoolean(true);
 					System.out.println("Sender: boolean sent");
 					PushToReceiverInt(s) ;
@@ -66,7 +70,8 @@ public class SendRequestMsgToUser implements Runnable {
 						PushToReceiverObject(FilenameList.get(j-1));
 					oob.flush();
 					}
-				
+					}
+					
 					//in = new ObjectInputStream(sock.getInputStream());
 					//if(in.readBoolean())
 					//{
@@ -74,16 +79,30 @@ public class SendRequestMsgToUser implements Runnable {
 					//}
 					//threadRunReceiveFiles=new Thread(new ReceiveFiles(in,oob));
 					
-					sendStatus=false;
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					
+				} catch(java.net.SocketException e){
+					System.out.println("Sender:The receiver could not be connected at port no. "+ port);
 					e.printStackTrace();
-				}
-				JOptionPane.showMessageDialog(null,"Request to send the files sent.","Information",JOptionPane.PLAIN_MESSAGE);
-				//closeClient() ;
-			
+					System.out.println("Therefore closing socket.");
+					sendStatus=false;
+					}
 				
+				catch(IOException e){  
+			System.out.println("Sender: problem found in IO streams.");
+			e.printStackTrace();}
+		
+
+
+				
+				
+				if(sendStatus==true)
+					{
+					JOptionPane.showMessageDialog(null,"Request to send the files sent.","Information",JOptionPane.PLAIN_MESSAGE);
+					//closeClient() ;
+					}
+			
 			System.out.println("Theard "+this.toString() +"stopping..");
+			sendStatus=true;
 	}
 	
 	void closeClient()  {
