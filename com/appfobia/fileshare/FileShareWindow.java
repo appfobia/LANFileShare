@@ -257,10 +257,15 @@ public class FileShareWindow extends JFrame implements ItemListener {
 			   @Override
 			public void actionPerformed(ActionEvent ae){
 				   threadRun=null;
-				   System.out.println("Connect bitton pressed.");
+				   System.out.println("Connect button pressed.");
 				   if(SendReqMsgObj==null){
 					   System.out.println("Theard "+this.toString() +"starting..");
 					   SendReqMsgObj=new SendRequestMsgToUser(UserListVector.get(UserList.getSelectedIndex()),FileListVector);
+				   }
+				   else {
+					   if(!SendReqMsgObj.clientsocket) {
+						   SendReqMsgObj.startServerSockIO();
+					   }
 				   }
 				   threadRun=new Thread(SendReqMsgObj);
 				   threadRun.start();
@@ -398,8 +403,17 @@ public class FileShareWindow extends JFrame implements ItemListener {
 			try {
 				if(RecvReqMsgObj!=null)
 				{
-					RecvReqMsgObj.closeServer();
-					showM("Closeserver");
+					
+					try {
+		    			threadRunRecvReqMsg.interrupt();
+		    			showM("Calling RecvReqMsgObj.closeServer()..");
+		    			RecvReqMsgObj.closeServer();
+		    			showM("Server closed");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						showM("Error in closing server at 1997.");
+					}
 				}
 				
 				if(SendReqMsgObj!=null)
@@ -733,6 +747,7 @@ showM("Item state :"+startReceive.isSelected());
     	}
     	else
     	{
+    		if(threadRunRecvReqMsg!=null) {
     		try {
     			threadRunRecvReqMsg.interrupt();
     			showM("Calling RecvReqMsgObj.closeServer()..");
@@ -743,6 +758,7 @@ showM("Item state :"+startReceive.isSelected());
 				e1.printStackTrace();
 				showM("Error in closing server at 1997.");
 			}
+    		}
     	}
     } 
 }
