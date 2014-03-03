@@ -1,0 +1,1 @@
+A JAVA based GUI Windows application to share files through private Local Area Network(LAN).
