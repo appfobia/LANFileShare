@@ -7,8 +7,10 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -28,33 +30,38 @@ import javax.swing.table.TableModel;
 
 public class ReceiveRequestMsg extends Thread {
 
-	Vector<FilesProperty> FilenameList;
+	Vector<FilesProperty> FilenameList=new Vector<FilesProperty>(0);;
 	String filenames[];
-	Socket sock;
+	public Socket sock=null;
 	final int port=1997;
-	ServerSocket serversock;
+	ServerSocket serversock=null;
 	JFrame FileReceiveFrame=null;
 	JScrollPane ReceivedFileTableSP=null;
 	JButton bAccept,bCancelRev;
 	DefaultListModel<String> ReceivedFileModel=null;
 	//JList<String> ReceivedFileJList=null;
-	ObjectInputStream oob=null;
-	ObjectOutputStream out=null;
+	public ObjectInputStream oob=null;
+	public ObjectOutputStream out=null;
+	public InputStream instrm=null;
+	public OutputStream outstrm=null;
 	DefaultTableModel myData=null;
 	JTable table=null;
 	String currentUserName=null;
 	InetAddress add=null;
 	JLabel frameHeading,lTotalFileSize;
 	long totalFileSize=0;
-	//File f=null;
-	//PrintWriter pw=null;
-	ReceiveRequestMsg() {
-		serversock=null;
-		sock=null;
-		FilenameList=new Vector<FilesProperty>(0);
-		FileReceiveFrame=getFileReceiveFrame();
+	Thread runReceiveFile=null;
+	ReceiveFiles ReceiveFilesObj=null;
+	int FilePropertyListSize=-1;
+	FileShareWindow JFrameObj=null;
+	File f=null;
+	PrintWriter pw=null;
+	ReceiveRequestMsg(FileShareWindow _JFrameObj) {
+		JFrameObj=_JFrameObj;
+
 		
-		/*f=new File(System.getProperty("user.home"),".lfsRecvLog") ;
+		
+		f=new File(System.getProperty("user.home"),".lfsRecvLog") ;
 		if(!f.exists())
 			{
 			try {
@@ -65,68 +72,65 @@ public class ReceiveRequestMsg extends Thread {
 				System.out.println("Error in creating the file");
 			}
 			}
+		try {
+			pw=new PrintWriter(  new FileWriter(  f ,true));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		AddToLogFile("Log file initialized");
-		*/
+		 
+	}
+	ReceiveRequestMsg() {
+		
 		
 	}
 	
 	@Override
 	public void run()  {
 		// TODO Auto-generated method stub
-		//System.out.println("Theard "+this.toString() +"starting..");
-		//AddToLogFile("Theard "+this.toString() +"starting..");
-		
+		//System.out.println("Thread "+this.toString() +"starting..");
+		AddToLogFile("Thread "+this.toString() +"starting..");
+		FileReceiveFrame=getFileReceiveFrame();
 			try {
-				//AddToLogFile("Opening server socket");
+				AddToLogFile("Opening server socket");
 				
 				serversock = new ServerSocket(port);
 				sock= serversock.accept();
 				
-				//AddToLogFile("trying to read Objects sent from client");
-				out=new ObjectOutputStream(sock.getOutputStream());
-				oob = new ObjectInputStream(sock.getInputStream());
+				AddToLogFile("trying to read Objects sent from client");
+				outstrm=sock.getOutputStream();
+				out=new ObjectOutputStream(outstrm);
+				instrm=sock.getInputStream();
+				oob = new ObjectInputStream(instrm);
 				
-			
 				add=sock.getInetAddress();
-				
-				//System.out.println("ssssssssss");
-				//while(true) {
-				
-				//AddToLogFile(""+sock.getLocalPort()+"    "+sock.getPort()+"\n");
+				AddToLogFile(""+sock.getLocalPort()+"    "+sock.getPort()+"\n");
+				AddToLogFile("out stream"+out.toString());
+				AddToLogFile("input stream"+instrm.toString());
+				AddToLogFile("Object input stream"+oob.toString());
+				AddToLogFile(""+sock.getLocalPort()+"    "+sock.getPort()+"\n");
 				while(!Thread.interrupted()) {
 					//try {
 					
 					if(readBoolean()) {
 						//AddToLogFile("Receiver: boolean received");
 						TransfrProtocol();
-						out.flush();
+						//out.flush();
 					}
 					
 					else
 						continue;
 					
 				}
-				//AddToLogFile("while loop ended. ");
-						//try {
-							closeServer();
-						//} catch (Exception e) {
-							// TODO Auto-generated catch block
-							//e.printStackTrace();
-						//}
+				AddToLogFile("while loop ended. ");
+						
+				InteruptThisThread();	
 					
-						Thread.currentThread().interrupt();
-					
-						//AddToLogFile("Theard "+this.toString() +"stopping.. xxxxxxxx");
+						AddToLogFile("Thread "+this.toString() +"stopping.. xxxxxxxx");
 			}catch(java.net.SocketException e){
 				
-				try {
-					closeServer();
-				}catch (IOException e1) {
-					// TODO Auto-generated catch block
-					//AddToLogFile("Receiver: Error in closing ObjectOutputStream & ObjectInputStream after receiving all the file names.");
-					e1.printStackTrace();
-				}
-				Thread.currentThread().interrupt();
+				InteruptThisThread();
 				//AddToLogFile("Receiver:The sender could not be connected at port no. "+ port);
 				}
 			
@@ -139,7 +143,16 @@ public class ReceiveRequestMsg extends Thread {
 		e.printStackTrace();}
 	}
 
- 
+ void InteruptThisThread() {
+	 try {
+			closeServer();
+		}catch (IOException e1) {
+			// TODO Auto-generated catch block
+			//AddToLogFile("Receiver: Error in closing ObjectOutputStream & ObjectInputStream after receiving all the file names.");
+			e1.printStackTrace();
+		}
+		Thread.currentThread().interrupt();
+ }
 
 public Vector<FilesProperty> getFilePropertyObj() {
 	 return FilenameList;
@@ -147,12 +160,12 @@ public Vector<FilesProperty> getFilePropertyObj() {
  
 public void TransfrProtocol() throws IOException , ClassNotFoundException{
 	
-	int FilePropertyListSize=-1;int j;
+	int j;
 	FilesProperty tempObj=null;
-	//AddToLogFile("Trying to read FilePropertyListSize from Sender..");
+	AddToLogFile("Trying to read FilePropertyListSize from Sender..");
 	FilePropertyListSize=ReadFromReceiverInt();
 	//AddToLogFile("Int received from sender:"+FilePropertyListSize);
-	//AddToLogFile("Read FilePropertyListSize from Sender.");
+	AddToLogFile("Read FilePropertyListSize from Sender.");
 		for(j=1;j<=FilePropertyListSize;j++) {
 			
 			tempObj=ReadFromReceiverObject();
@@ -170,11 +183,11 @@ public void TransfrProtocol() throws IOException , ClassNotFoundException{
 			}
 			
 		}
-		
+		AddToLogFile("TrnsferProtocol finished.");
 		}
 
  void closeServer() throws IOException {
-	 //AddToLogFile("Close server called.");
+	 AddToLogFile("Close server called.");
 	 //push a msg to client to say that there will will be no further communication.
 		try {
 			if(oob!=null)
@@ -183,14 +196,14 @@ public void TransfrProtocol() throws IOException , ClassNotFoundException{
 				out.close();
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
-			//AddToLogFile("Error in closing ObjectOutputStream & ObjectInputStream after receiving all the file names.");
+			AddToLogFile("Error in closing ObjectOutputStream & ObjectInputStream after receiving all the file names.");
 			e1.printStackTrace();
 		}
 		if(!serversock.isClosed())
 			serversock.close();
 		
-			//if(pw!=null)
-			//pw.close();
+			if(pw!=null)
+			pw.close();
 	}
  
  public JFrame getFileReceiveFrame() {
@@ -230,23 +243,33 @@ public void TransfrProtocol() throws IOException , ClassNotFoundException{
 		bAccept.addActionListener(new ActionListener(){
 			   @Override
 			public void actionPerformed(ActionEvent ae){
-				   tempFrame.dispose();
-				   // call the receiving
-				   try {
-					   if(out!=null)
-					{
-						   //out=new ObjectOutputStream(sock.getOutputStream());
-						   out.writeBoolean(true);
-						   out.close();
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				   
+				   if(instrm!=null )
+				{
+					   runReceiveFile=null;
+					   System.out.println("Accept button pressed.");
+					   if(ReceiveFilesObj==null){
+						   
+						   AddToLogFile(""+sock.getLocalPort()+"    "+sock.getPort()+"\n");
+							AddToLogFile("out stream"+out.toString());
+							AddToLogFile("input stream"+instrm.toString());
+							AddToLogFile("Object input stream"+oob.toString());
+						   ReceiveFilesObj=new ReceiveFiles(this);
+						   ReceiveFilesObj.start();
+					   }
+					   //runReceiveFile=new Thread(ReceiveFilesObj);
+					   //runReceiveFile.start();
+					   
+					   
+					  // out.writeBoolean(true);
+					   //out.close();
 				}
 				   
-				   FilenameList.clear();
+				   
 				   myData=null;
 				   totalFileSize=0;
+				   tempFrame.dispose();
+				   //Thread.currentThread().interrupt();
 			   }
 		});
 		bAccept.setToolTipText("Accept file receive.");
@@ -324,27 +347,11 @@ else
 	return false;
 
 }
-public void InterruptReceiverThread() throws IOException {
-	Thread.currentThread().interrupt();
-	closeServer();
-}
 
-/*public void AddToLogFile(String add) {
-	
-	
-	try {
-		
-		pw=new PrintWriter(  new FileWriter(  f ,true));
-		pw.println(add);
-		pw.flush();
-		
-	} catch (IOException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
-	
 
-	
-}*/
+ public void AddToLogFile(String add) {
+	pw.println(add);
+	pw.flush();
+} 
 
 }

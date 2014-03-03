@@ -1,5 +1,6 @@
 package fileshare;
 
+import java.io.File;
 import java.io.Serializable;
 
 public class FilesProperty implements Serializable{
@@ -10,13 +11,14 @@ public class FilesProperty implements Serializable{
 	public String name=null;
 	public String size=null;
 	public long absSize;
+	public File f=null;
 
-
-	FilesProperty(String _name, String _size,long _absSize) {
+	FilesProperty(String _name, String _size,long _absSize,File _f) {
 		// TODO Auto-generated constructor stub
 		 name=_name;
 		 size=_size;
 		 absSize=_absSize;
+		 f=_f;
 	}
 	public String getFileName(){
 		return name;
@@ -27,4 +29,8 @@ public class FilesProperty implements Serializable{
 	public long getAbsFileSize(){
 		return absSize;
 }
+	public File getFile(){
+		return f;
+}
+	
 }

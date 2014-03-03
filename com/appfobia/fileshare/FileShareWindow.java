@@ -64,7 +64,7 @@ public class FileShareWindow extends JFrame implements ItemListener {
 	JScrollPane UsernameListSP,FileListSP;
 	JLabel lHostIp,lUserName,lSelecthostUserName,lSfile,lFilesSelected;
 	JTextField tfHostIp,tfUserName;
-	JButton bAddIp,bSelect,bConnect,bSendFile,bSelectfiles,bDeleteUsernames,bAbout,bHelp,bEULA,bRemoveFile,bCancel;
+	JButton bAddIp,bSelect,bConnect,bSendFile,bSelectfiles,bDeleteUsernames,bAbout,bHelp,bEULA,bRemoveFile,bCancel,bSaveFile;
 	JList<String> UserList;
 	JList<String> FileList;
 	Vector<UsernameProperty> UserListVector;
@@ -73,7 +73,7 @@ public class FileShareWindow extends JFrame implements ItemListener {
 	String MetaDataFileName=".LFS";
 	String MetaDataFileNamePath=null;
 	JCheckBox startReceive ;
-	
+	File pathWhereFilesToBeSave=null;
 	String HostIp,UserName;
 	Thread threadRun=null;
 	Thread threadRunRecvReqMsg=null;
@@ -217,6 +217,29 @@ public class FileShareWindow extends JFrame implements ItemListener {
 		lSelecthostUserName=new JLabel("Select usernames to send files :") ;
 		lSelecthostUserName.setBounds(10,30,200,25);
 		
+		
+		bSaveFile=new JButton("Select file receive directory");
+		bSaveFile.setBounds(210,30,200,25);
+		bSaveFile.addActionListener(new ActionListener(){
+			   @Override
+			public void actionPerformed(ActionEvent ae){
+				   //System.out.println("Inside Server connect button.");
+				   FileListVector.clear();
+				   FileListVector.trimToSize();
+				   FilelistModel.clear();
+				   FilelistModel.trimToSize();
+				   filechooser=new JFileChooser();
+				   filechooser.setName("Select the file directory where the received files are to be saved.");
+				   filechooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				   int option = filechooser.showDialog(getContentPane(),"Select");
+			        if (option == JFileChooser.APPROVE_OPTION) {
+			        	pathWhereFilesToBeSave=filechooser.getSelectedFile();
+			        	
+			          }
+			          
+				   }
+		});
+		
 		bSelectfiles=new JButton("Select file(s) to be sent");
 		bSelectfiles.setBounds(430,30,200,25);
 		bSelectfiles.addActionListener(new ActionListener(){
@@ -228,12 +251,14 @@ public class FileShareWindow extends JFrame implements ItemListener {
 				   FilelistModel.clear();
 				   FilelistModel.trimToSize();
 				   filechooser=new JFileChooser();
+				   filechooser.setApproveButtonText("Select");
 				   filechooser.setMultiSelectionEnabled(true); 
-				   int option = filechooser.showSaveDialog(getContentPane());
+				   filechooser.setBackground(Color.cyan);
+				   int option = filechooser.showDialog(getContentPane(),"Select");
 			        if (option == JFileChooser.APPROVE_OPTION) {
 			          File[] sf = filechooser.getSelectedFiles();
 			          for (int i = 0; i<sf.length; i++) {
-			            FileListVector.addElement(new FilesProperty(sf[i].getName(),filesize(sf[i].length()),sf[i].length()));
+			            FileListVector.addElement(new FilesProperty(sf[i].getName(),filesize(sf[i].length()),sf[i].length(),sf[i]));
 			            FilelistModel.addElement(sf[i].getName()+" // "+filesize(sf[i].length()));
 			          }
 			          
@@ -246,6 +271,7 @@ public class FileShareWindow extends JFrame implements ItemListener {
 		lFilesSelected.setBounds(430,70,200,25);
 		
 		panel01.add(lSelecthostUserName);
+		panel01.add(bSaveFile);
 		panel01.add(bSelectfiles);
 		panel01.add(lFilesSelected);
 		
@@ -261,6 +287,11 @@ public class FileShareWindow extends JFrame implements ItemListener {
 				   if(SendReqMsgObj==null){
 					   System.out.println("Theard "+this.toString() +"starting..");
 					   SendReqMsgObj=new SendRequestMsgToUser(UserListVector.get(UserList.getSelectedIndex()),FileListVector);
+				   }
+				   else {
+					   if(!SendReqMsgObj.clientsocket) {
+						   SendReqMsgObj.startServerSockIO();
+					   }
 				   }
 				   threadRun=new Thread(SendReqMsgObj);
 				   threadRun.start();
@@ -735,7 +766,7 @@ showM("Item state :"+startReceive.isSelected());
     	if(startReceive.isSelected()) {
     		showM("Calling RecvReqMsgObj..");
     		RecvReqMsgObj=null;
-    		 RecvReqMsgObj=new ReceiveRequestMsg();
+    		 RecvReqMsgObj=new ReceiveRequestMsg(this);
     		threadRunRecvReqMsg=null;
     		 threadRunRecvReqMsg=new Thread(RecvReqMsgObj);
     		 threadRunRecvReqMsg.start();
